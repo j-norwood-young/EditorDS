@@ -22,7 +22,7 @@ Since I know nothing about developing word processors, I'm working it out as I g
     <li><del>Wrap lines</del></li>
     <li><del>Move cursor to next and previous lines</del></li>
     <li><del>Move cursor by line with arrows up and down</del></li>
-    <li>Fix multiline delete</li>
+    <li><del>Fix multiline delete</del></li>
     <li>Clean up cursor handling</li>
     <li>Moving cursor with mouse</li>
     <li>Blinking cursor</li>
