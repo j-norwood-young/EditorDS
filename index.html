@@ -27,6 +27,7 @@
 				var letter=String.fromCharCode(e.keyCode);
 				textcursorpos++;
 				self.text = self.text.substring(0, textcursorpos-1) + letter + self.text.substring(textcursorpos-1, self.text.length);
+				self.textpostolinepos();
 				self.animate();
 				caught = true;
 			}
@@ -122,6 +123,29 @@
 		setInterval(function() {
 			self.animate();
 		}, 500);
+		
+		this.textpostolinepos = textpostolinepos;
+		//Change the linecursorpos to conform with the textcursorpos
+		function textpostolinepos() {
+			var tmplines = [];
+			var orig = this.text.substring(0, textcursorpos);
+			var tmp = '';
+			var words = orig.split(' ');
+			while(words.length) {
+				s = tmp;
+				word = words.shift();
+				tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
+				var width=context.measureText(tmp).width;
+				if (width >= (this.width - 10)) {
+					tmplines.push(s);
+					tmp = word; //Start next line with the wrapped word
+				}
+			}
+			tmplines.push(tmp); //Don't forget the last line
+			linecursorpos.y = tmplines.length - 1;
+			linecursorpos.x = tmplines[tmplines.length - 1].length;
+			console.log(linecursorpos);
+		}
 		
 		this.animate = function() {
 			//Clear the scene
