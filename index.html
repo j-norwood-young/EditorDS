@@ -80,6 +80,11 @@
 		//Animation
 		var cursorBlink=0;
 		setInterval(function() {
+			if (cursorBlink) {
+				cursorBlink = 0;
+			} else {
+				cursorBlink=1;
+			}
 			self.animate();
 		}, 500);
 		
@@ -203,21 +208,18 @@
 			//Clear the scene
 			context.clearRect(0, 0, this.width, this.height);
 			
-			//Get ready to blink the cursor
-			if (cursorBlink) {
-				cursorBlink = 0;
-			} else {
-				cursorBlink=1;
-			}
+			
 			//lines=[];
 			//Wrap by word and put cursor in right place
 			//this.populate_lines();
 			for(x=0; x < lines.length; x++) {
 				context.fillText(lines[x], 0, (self.fontsize * (x+1)));
 			}
-			cursorpos.x = context.measureText(lines[linecursorpos.y].substring(0, linecursorpos.x)).width;
-			cursorpos.y = linecursorpos.y * self.fontsize;
-			context.fillRect(cursorpos.x, cursorpos.y, 1,  this.fontsize);
+			if (cursorBlink == 1) {
+				cursorpos.x = context.measureText(lines[linecursorpos.y].substring(0, linecursorpos.x)).width;
+				cursorpos.y = linecursorpos.y * self.fontsize;
+				context.fillRect(cursorpos.x, cursorpos.y, 1,  this.fontsize);
+			}
 		}
 		
 		this.populate_lines();
@@ -262,7 +264,7 @@
 		<li class='done'>Fix multiline delete</li>
 		<li class='done'>Clean up cursor handling</li>
 		<li>Moving cursor with mouse</li>
-		<li>Blinking cursor</li>
+		<li class='done'>Blinking cursor</li>
 		<li>Formatting system</li>
 		<li>Bold</li>
 		<li>Italic</li>

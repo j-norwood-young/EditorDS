@@ -25,7 +25,7 @@ Since I know nothing about developing word processors, I'm working it out as I g
     <li><del>Fix multiline delete</del></li>
     <li><del>Clean up cursor handling</del></li>
     <li>Moving cursor with mouse</li>
-    <li>Blinking cursor</li>
+    <li><del>Blinking cursor</del></li>
     <li>Formatting system</li>
     <li>Bold</li>
     <li>Italic</li>
