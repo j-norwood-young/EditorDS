@@ -6,7 +6,7 @@
 	$.fn.editorDS = function() {
 		this.margin = {x: 10, y: 10};
 		this.width = 900;
-		this.height = 400;
+		this.height = 300;
 		this.fontsize = 24;
 		this.text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vestibulum sodales lacus, id sollicitudin mi adipiscing id. Morbi purus felis, iaculis nec sagittis id, ultrices ac sapien. Praesent velit dolor, consectetur iaculis scelerisque eget, cursus nec magna. Fusce vitae turpis est, at luctus leo. Vestibulum purus nisi, suscipit sed accumsan ut, blandit vel quam. Vivamus at dui a felis molestie adipiscing ac quis leo. Aliquam erat volutpat. Vestibulum porta, augue eget malesuada auctor, urna mauris hendrerit urna, et accumsan massa enim bibendum leo. Etiam et congue elit. Pellentesque a nibh justo, at dignissim risus. Mauris non neque a mi accumsan mattis. Integer tortor nisi, consequat sagittis dignissim ac, hendrerit eget ipsum. Proin leo augue, viverra vitae condimentum eu, pretium id erat.";
 		this.el = false;
@@ -75,6 +75,24 @@
 			if (caught) {
 				return false;
 			}
+		});
+		
+		$('.editorDS-canvas').click(function(e) {
+			x=e.offsetX;
+			y=e.offsetY;
+			$("#mousex").html(x);
+			$("#mousey").html(y);
+			line = Math.floor(y / self.fontsize);
+			var s="";
+			var char=0;
+			for(var i=0; i < lines[line].length; i++) {
+				s = s + lines[line][i];
+				if (context.measureText(s).width > x) {
+					char = s.length - 1;
+					break;
+				}
+			}
+			self.set_linecursor(char, line);
 		});
 		
 		//Animation
@@ -247,6 +265,7 @@
 <div>
 	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span></p>
 	<p><strong>Text cursor pos</strong> <span id="textcursor">0</span></p>
+	<p><strong>Mouse click pos:</strong> <span id="mousex">0</span> <span id="mousey">0</span></p>
 </div>
 <style>
 	.done { text-decoration: line-through }
@@ -263,7 +282,7 @@
 		<li class='done'>Move cursor by line with arrows up and down</li>
 		<li class='done'>Fix multiline delete</li>
 		<li class='done'>Clean up cursor handling</li>
-		<li>Moving cursor with mouse</li>
+		<li class='done'>Moving cursor with mouse</li>
 		<li class='done'>Blinking cursor</li>
 		<li>Formatting system</li>
 		<li>Bold</li>
