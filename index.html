@@ -13,82 +13,62 @@
 		this.append('<canvas class="editorDS-canvas" width="'+this.width+'" height="'+this.height+'"></canvas>');
 		var canvas = this.children('.editorDS-canvas')[0];
 		var context = canvas.getContext('2d');
-		var cursorpos={x:this.margin.x, y:this.margin.y};
+		var cursorpos={ x:this.margin.x, y:this.margin.y };
 		var textcursorpos=0;
 		var linecursorpos={x:0, y:0}; //Char, line
 		var self = this;
 		var lines=[];
 		context.font = this.fontsize+"px helvetica";
+		
 		$(document).keypress(function(e) {
 			var caught = false;
 			var keyCode=e.which;
 			letter='';
 			if (!e.metaKey) {
 				var letter=String.fromCharCode(e.keyCode);
-				textcursorpos++;
-				self.text = self.text.substring(0, textcursorpos-1) + letter + self.text.substring(textcursorpos-1, self.text.length);
-				self.textpostolinepos();
-				self.animate();
+				self.text = self.text.substring(0, textcursorpos) + letter + self.text.substring(textcursorpos, self.text.length);
+				self.change_textcursor(+1);
 				caught = true;
 			}
-			
 			if (caught) {
 				return false;
 			}
 		});
+		
 		$(document).keydown(function(e) {
-			console.log(e);
+			//console.log(e);
 			var caught = false;
 			var keyCode=e.which;
 			if (keyCode == 8) { //backspace
 				self.text = self.text.substring(0, textcursorpos - 1) + self.text.substring(textcursorpos, self.text.length);
-				textcursorpos--;
-				if (linecursorpos.x > 0) {
-					linecursorpos.x--;
-				} else {
-					linecursorpos.y--;
-					linecursorpos.x=lines[linecursorpos.y].length;
-				}
-				self.animate();
+				self.change_textcursor(-1);
 				caught = true;
 			}
 			if (keyCode == 37) { //left arrow
 				if (e.metaKey) {
-					textcursorpos=0;
-					linecursorpos.x=0;
-					self.animate();
+					self.set_linecursorpos(0, linecursorpos.y);
 				} else if (textcursorpos > 0) {
-					textcursorpos--;
-					self.textpostolinepos();
-					self.animate();
+					self.change_textcursor(-1);
 				}
 				caught = true;
 			}
 			if (keyCode == 39) { //right arrow
 				if (e.metaKey) {
-					textcursorpos=self.text.length;
-					self.animate();
+					self.set_linecursor(lines[linecursorpos.y].length-1, linecursorpos.y);
 				} else if (textcursorpos< self.text.length) {
-					textcursorpos++;
-					self.textpostolinepos();
-					console.log(textcursorpos);
-					self.animate();
+					self.change_textcursor(+1);
 				}
 				caught = true;
 			}
 			if (keyCode == 38) { //up arrow
 				if ((lines.length>1) && (linecursorpos.y>0)) {
-					linecursorpos.y--;
-					self.linepostotextpos();
-					self.animate();
+					self.change_linecursor(0, -1);
 				}
 				caught = true;
 			}
 			if (keyCode == 40) { //down arrow
 				if (linecursorpos.y<(lines.length-1)) {
-					linecursorpos.y++;
-					self.linepostotextpos();
-					self.animate();
+					self.change_linecursor(0, 1);
 				}
 				caught = true;
 			}
@@ -103,10 +83,31 @@
 			self.animate();
 		}, 500);
 		
+		//Fill our 'lines' array with words
+		this.populate_lines = populate_lines;
+		
+		function populate_lines() {
+			lines=[];
+			var tmp = '';
+			var words = this.text.split(' ');
+			while(words.length) {
+			    s = tmp;
+			    word = words.shift();
+			    tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
+			    var width=context.measureText(tmp).width;
+			    if (width >= (this.width - 10)) {
+			    	lines.push(s + ' '); //We want to end with a space
+			    	tmp = word; //Start next line with the wrapped word
+			    }
+			}
+			lines.push(tmp); //Don't forget the last line
+		}
+		
 		//Change the linecursorpos to conform with the textcursorpos
 		this.textpostolinepos = textpostolinepos;
 		
 		function textpostolinepos() {
+			this.populate_lines();
 			var tmplines = [];
 			var orig = this.text.substring(0, textcursorpos);
 			var tmp = '';
@@ -125,8 +126,7 @@
 			linecursorpos.y = tmplines.length - 1;
 			//Check that we're not on a wrapped word here
 			var tmpline = lines[linecursorpos.y];
-			if (tmpline.length < tmplines[tmplines.length - 1].length) {
-				console.log([ tmpline.length, tmplines[tmplines.length - 1] ]);
+			if (tmpline.length - 1 < tmplines[tmplines.length - 1].length) {
 				linecursorpos.y++;
 				linecursorpos.x = tmplines[tmplines.length - 1].length - tmpline.length;
 			} else {
@@ -140,21 +140,68 @@
 		function linepostotextpos() {
 			var count=0;
 			for(x=0; x<linecursorpos.y; x++) {
-				count=count+lines[x].length+1;
+				count=count+lines[x].length;
 			}
 			textcursorpos=count+linecursorpos.x;
+		}
+		
+		this.change_textcursor = change_textcursor;
+		
+		function change_textcursor(x) {
+			textcursorpos += x;
+			this.populate_lines();
+			this.textpostolinepos();
+			this.animate();
+			this.display();
+		}
+		
+		this.set_textcursor = set_textcursor;
+		
+		function set_textcursor(x) {
+			textcursorpos = x;
+			this.populate_lines();
+			this.textpostolinepos();
+			this.animate();
+			this.display();
+		}
+		
+		this.change_linecursor = change_linecursor;
+		
+		function change_linecursor(x, y) {
+			linecursorpos.x += x;
+			linecursorpos.y += y;
+			if (linecursorpos.x > lines[linecursorpos.y].length) {
+				linecursorpos.x = lines[linecursorpos.y].length;
+			}
+			this.populate_lines();
+			this.linepostotextpos();
+			this.animate();
+			this.display();
+		}
+		
+		this.set_linecursor = set_linecursor;
+		
+		function set_linecursor(x, y) {
+			linecursorpos.x = x;
+			linecursorpos.y = y;
+			this.populate_lines();
+			this.linepostotextpos();
+			this.animate();
+			this.display();
+		}
+		
+		this.display = display;
+		
+		function display() {
+			var self=this;
+			$("#linecursorx").html(linecursorpos.x);
+			$("#linecursory").html(linecursorpos.y);
+			$("#textcursor").html(textcursorpos);
 		}
 		
 		this.animate = function() {
 			//Clear the scene
 			context.clearRect(0, 0, this.width, this.height);
-			
-			//Work out if we're going to have to wrap lines
-			var overrun = false;
-			var measuretext = context.measureText(this.text);
-			if (measuretext.width > this.width) {
-				overrun = true;
-			}
 			
 			//Get ready to blink the cursor
 			if (cursorBlink) {
@@ -162,40 +209,18 @@
 			} else {
 				cursorBlink=1;
 			}
-			lines=[];
-			if (!overrun) { //Don't wrap - just display the text and move on
-				context.fillText(this.text, 0, self.fontsize);
-				lines[0]=this.text;
-				//if (cursorBlink) {
-					cursorpos.x = context.measureText(this.text.substring(0, textcursorpos)).width;
-					cursorpos.y = this.fontsize;
-				//}
-			} else { //A little more complicated. Wrap by word and put cursor in right place
-				var tmp = '';
-				var words = this.text.split(' ');
-				while(words.length) {
-					s = tmp;
-					word = words.shift();
-					tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
-					var width=context.measureText(tmp).width;
-					if (width >= (this.width - 10)) {
-						lines.push(s);
-						tmp = word; //Start next line with the wrapped word
-					}
-				}
-				lines.push(tmp); //Don't forget the last line
-				var count = lines[0].length;
-				var cursorline = 1;
-				var prevcount = 0;
-				prevchars = 0;
-				for(x=0; x < lines.length; x++) {
-					context.fillText(lines[x], 0, (self.fontsize * (x+1)));
-				}
-				cursorpos.x = context.measureText(lines[linecursorpos.y].substring(0, linecursorpos.x)).width;
-				cursorpos.y = linecursorpos.y * self.fontsize;
+			//lines=[];
+			//Wrap by word and put cursor in right place
+			//this.populate_lines();
+			for(x=0; x < lines.length; x++) {
+				context.fillText(lines[x], 0, (self.fontsize * (x+1)));
 			}
+			cursorpos.x = context.measureText(lines[linecursorpos.y].substring(0, linecursorpos.x)).width;
+			cursorpos.y = linecursorpos.y * self.fontsize;
 			context.fillRect(cursorpos.x, cursorpos.y, 1,  this.fontsize);
 		}
+		
+		this.populate_lines();
 		
 		this.append('<input type="hidden" class="editorDS-input" />');
 	}
@@ -217,6 +242,10 @@
 	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button pic'>pic</div>
 </div>-->
 </div>
+<div>
+	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span></p>
+	<p><strong>Text cursor pos</strong> <span id="textcursor">0</span></p>
+</div>
 <style>
 	.done { text-decoration: line-through }
 </style>
@@ -231,7 +260,7 @@
 		<li class='done'>Move cursor to next and previous lines</li>
 		<li class='done'>Move cursor by line with arrows up and down</li>
 		<li class='done'>Fix multiline delete</li>
-		<li>Clean up cursor handling</li>
+		<li class='done'>Clean up cursor handling</li>
 		<li>Moving cursor with mouse</li>
 		<li>Blinking cursor</li>
 		<li>Formatting system</li>
