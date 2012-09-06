@@ -31,6 +31,13 @@
 			letter='';
 			if (!e.metaKey) {
 				var letter=String.fromCharCode(e.keyCode);
+				if (self.select_start != self.select_end) {
+					self.text = self.text.substring(0, self.select_start) + self.text.substring(self.select_end, self.text.length);
+					console.log(self.text);
+					self.populate_lines();
+					self.set_textcursor(self.select_start);
+					self.select_end = self.select_start;
+				}
 				self.text = self.text.substring(0, textcursorpos) + letter + self.text.substring(textcursorpos, self.text.length);
 				self.change_textcursor(+1);
 				caught = true;
@@ -44,6 +51,11 @@
 			var caught = false;
 			var keyCode=e.which;
 			if (keyCode == 8) { //backspace
+				if (self.select_start != self.select_end) {
+					self.text = self.text.substring(0, self.select_start) + self.text.substring(self.select_end, self.text.length);
+					self.set_textcursor(self.select_start);
+					self.select_end = self.select_start;
+				}
 				self.text = self.text.substring(0, textcursorpos - 1) + self.text.substring(textcursorpos, self.text.length);
 				self.change_textcursor(-1);
 				caught = true;
@@ -51,6 +63,7 @@
 			if (keyCode == 37) { //left arrow
 				if (e.metaKey) {
 					self.set_linecursorpos(0, linecursorpos.y);
+					self.select_start = self.select_end = textcursorpos;
 				} else if (textcursorpos > 0) {
 					if (e.shiftKey) {
 						if (!selecting) {
@@ -63,6 +76,7 @@
 						self.animate();
 					} else {
 						self.change_textcursor(-1);
+						self.select_start = self.select_end = textcursorpos;
 					}
 				}
 				caught = true;
@@ -70,6 +84,7 @@
 			if (keyCode == 39) { //right arrow
 				if (e.metaKey) {
 					self.set_linecursor(self.lines[linecursorpos.y].length-1, linecursorpos.y);
+					self.select_start = self.select_end = textcursorpos;
 				} else if (textcursorpos< self.text.length) {
 					if (e.shiftKey) {
 						if (!selecting) {
@@ -82,6 +97,7 @@
 						self.animate();
 					} else {
 						self.change_textcursor(+1);
+						self.select_start = self.select_end = textcursorpos;
 					}
 				}
 				caught = true;
@@ -99,6 +115,7 @@
 				} else {
 					if ((self.lines.length>1) && (linecursorpos.y>0)) {
 						self.change_linecursor(0, -1);
+						self.select_start = self.select_end = textcursorpos;
 					}
 				}
 				caught = true;
@@ -116,6 +133,7 @@
 				} else {
 					if (linecursorpos.y<(self.lines.length-1)) {
 						self.change_linecursor(0, 1);
+						self.select_start = self.select_end = textcursorpos;
 					}
 				}
 				caught = true;
@@ -182,6 +200,9 @@
 			line = Math.floor(y / self.fontsize);
 			var s="";
 			var char=0;
+			if (!self.lines[line]) {
+				return { char: 0, line: 0 };
+			}
 			for(var i=0; i < self.lines[line].length; i++) {
 				s = s + self.lines[line][i];
 				if (context.measureText(s).width > x) {
@@ -204,9 +225,7 @@
 		}, 500);
 		
 		//Fill our 'lines' array with words
-		this.populate_lines = populate_lines;
-		
-		function populate_lines() {
+		this.populate_lines = function() {
 			self.lines=[];
 			var tmp = '';
 			var words = this.text.split(' ');
@@ -234,10 +253,16 @@
 			var total = 0;
 			var line = 0;
 			while (textpos > total) {
+				if (!self.lines[line]) {
+					break;;
+				}
 				total += self.lines[line++].length;
 			}
 			line--;
 			var diff = total - textpos;
+			if (!self.lines[line]) {
+				return { char: 0, line: 0 };
+			}
 			var char = self.lines[line].length - diff;
 			return { char: char, line: line };
 		}
