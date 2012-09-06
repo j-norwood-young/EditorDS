@@ -26,6 +26,9 @@ Since I know nothing about developing word processors, I'm working it out as I g
     <li><del>Clean up cursor handling</del></li>
     <li><del>Moving cursor with mouse</del></li>
     <li><del>Blinking cursor</del></li>
+    <li><del>Selecting</del></li>
+    <li>Bug when selecting from first char</li>
+		<li>Deleting selection</li>
     <li>Formatting system</li>
     <li>Bold</li>
     <li>Italic</li>
@@ -37,7 +40,6 @@ Since I know nothing about developing word processors, I'm working it out as I g
     <li>Images</li>
     <li>Tables</li>
     <li>Copy and pasting</li>
-    <li>Selecting</li>
     <li>Spellcheck</li>
     <li>…</li>
     <li>WIN!</li>

@@ -10,7 +10,7 @@
 		this.fontsize = 24;
 		this.text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vestibulum sodales lacus, id sollicitudin mi adipiscing id. Morbi purus felis, iaculis nec sagittis id, ultrices ac sapien. Praesent velit dolor, consectetur iaculis scelerisque eget, cursus nec magna. Fusce vitae turpis est, at luctus leo. Vestibulum purus nisi, suscipit sed accumsan ut, blandit vel quam. Vivamus at dui a felis molestie adipiscing ac quis leo. Aliquam erat volutpat. Vestibulum porta, augue eget malesuada auctor, urna mauris hendrerit urna, et accumsan massa enim bibendum leo. Etiam et congue elit. Pellentesque a nibh justo, at dignissim risus. Mauris non neque a mi accumsan mattis. Integer tortor nisi, consequat sagittis dignissim ac, hendrerit eget ipsum. Proin leo augue, viverra vitae condimentum eu, pretium id erat.";
 		this.el = false;
-		this.append('<canvas class="editorDS-canvas" width="'+this.width+'" height="'+this.height+'"></canvas>');
+		this.append('<canvas style="cursor:text" class="editorDS-canvas" width="'+this.width+'" height="'+this.height+'"></canvas>');
 		var canvas = this.children('.editorDS-canvas')[0];
 		var context = canvas.getContext('2d');
 		var cursorpos={ x:this.margin.x, y:this.margin.y };
@@ -18,6 +18,11 @@
 		var linecursorpos={x:0, y:0}; //Char, line
 		var self = this;
 		var lines=[];
+		this.select_start=0;
+		this.select_end=0;
+		var selecting=false;
+		var select_text="";
+		
 		context.font = this.fontsize+"px helvetica";
 		
 		$(document).keypress(function(e) {
@@ -36,7 +41,6 @@
 		});
 		
 		$(document).keydown(function(e) {
-			//console.log(e);
 			var caught = false;
 			var keyCode=e.which;
 			if (keyCode == 8) { //backspace
@@ -48,7 +52,18 @@
 				if (e.metaKey) {
 					self.set_linecursorpos(0, linecursorpos.y);
 				} else if (textcursorpos > 0) {
-					self.change_textcursor(-1);
+					if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_textcursor(-1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+					} else {
+						self.change_textcursor(-1);
+					}
 				}
 				caught = true;
 			}
@@ -56,19 +71,52 @@
 				if (e.metaKey) {
 					self.set_linecursor(lines[linecursorpos.y].length-1, linecursorpos.y);
 				} else if (textcursorpos< self.text.length) {
-					self.change_textcursor(+1);
+					if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_textcursor(+1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+					} else {
+						self.change_textcursor(+1);
+					}
 				}
 				caught = true;
 			}
 			if (keyCode == 38) { //up arrow
-				if ((lines.length>1) && (linecursorpos.y>0)) {
-					self.change_linecursor(0, -1);
+				if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_linecursor(0, -1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+				} else {
+					if ((lines.length>1) && (linecursorpos.y>0)) {
+						self.change_linecursor(0, -1);
+					}
 				}
 				caught = true;
 			}
 			if (keyCode == 40) { //down arrow
-				if (linecursorpos.y<(lines.length-1)) {
-					self.change_linecursor(0, 1);
+				if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_linecursor(0, 1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+				} else {
+					if (linecursorpos.y<(lines.length-1)) {
+						self.change_linecursor(0, 1);
+					}
 				}
 				caught = true;
 			}
@@ -77,7 +125,56 @@
 			}
 		});
 		
+		$(document).keyup(function(e) {
+			if (e.keyCode==16) { //Lifted the shift key
+				if (selecting) {
+					selecting = false;
+					self.select_end = textcursorpos;
+					select_text = self.text.substring(self.select_start, self.select_end);
+					console.log(select_text);
+				}
+			}
+		});
+		
 		$('.editorDS-canvas').click(function(e) {
+			
+		});
+		
+		var dragging = false;
+		
+		$('.editorDS-canvas').mousedown(function(e) {
+			dragging = true;
+			var pos=get_cursor_from_mouse(e);
+			self.set_linecursor(pos.char, pos.line);
+			self.select_start = self.select_end = textcursorpos;
+		});
+		
+		$('.editorDS-canvas').mouseup(function(e) {
+			dragging = false;
+			var pos=get_cursor_from_mouse(e);
+			if (!((pos.char == linecursorpos.x) && (pos.line == linecursorpos.y))) {
+				//We dragged
+				self.set_linecursor(pos.char, pos.line);
+				self.select_end = textcursorpos;
+				select_text = self.text.substring(self.select_start, self.select_end);
+				console.log(self.select_start);
+				console.log(select_text);
+			}
+		});
+		
+		$('.editorDS-canvas').mousemove(function(e) {
+			var pos=get_cursor_from_mouse(e);
+			if (!((pos.char == linecursorpos.x) && (pos.line == linecursorpos.y)) && (dragging)) {
+				//We dragged
+				self.set_linecursor(pos.char, pos.line);
+				self.select_end = textcursorpos;
+				select_text = self.text.substring(self.select_start, self.select_end);
+				self.animate();
+			}
+		});
+		
+		
+		function get_cursor_from_mouse(e) {
 			x=e.offsetX;
 			y=e.offsetY;
 			$("#mousex").html(x);
@@ -92,8 +189,8 @@
 					break;
 				}
 			}
-			self.set_linecursor(char, line);
-		});
+			return { char: char, line: line };
+		}
 		
 		//Animation
 		var cursorBlink=0;
@@ -130,9 +227,26 @@
 		this.textpostolinepos = textpostolinepos;
 		
 		function textpostolinepos() {
-			this.populate_lines();
-			var tmplines = [];
-			var orig = this.text.substring(0, textcursorpos);
+			var pos = get_linepos_from_textpos(textcursorpos);
+			linecursorpos.y = pos.line;
+			linecursorpos.x = pos.char;
+		}
+		
+		this.get_linepos_from_textpos = get_linepos_from_textpos;
+		
+		function get_linepos_from_textpos(textpos) {
+			self.populate_lines();
+			var total = 0;
+			var line = 0;
+			while (textpos > total) {
+				total += lines[line++].length;
+			}
+			line--;
+			var diff = total - textpos;
+			var char = lines[line].length - diff;
+			
+			/*var tmplines = [];
+			var orig = self.text.substring(0, textpos);
 			var tmp = '';
 			var words = orig.split(' ');
 			while(words.length) {
@@ -146,15 +260,31 @@
 				}
 			}
 			tmplines.push(tmp); //Don't forget the last line
-			linecursorpos.y = tmplines.length - 1;
+			line = tmplines.length - 1;
 			//Check that we're not on a wrapped word here
-			var tmpline = lines[linecursorpos.y];
+			var tmpline = lines[line];
 			if (tmpline.length - 1 < tmplines[tmplines.length - 1].length) {
-				linecursorpos.y++;
-				linecursorpos.x = tmplines[tmplines.length - 1].length - tmpline.length;
+				line++;
+				char = tmplines[tmplines.length - 1].length - tmpline.length;
 			} else {
-				linecursorpos.x = tmplines[tmplines.length - 1].length;
-			}
+				char = tmplines[tmplines.length - 1].length;
+			}*/
+			return { char: char, line: line };
+		}
+		
+		this.get_cursorpos_from_linepos = get_cursorpos_from_linepos;
+		
+		function get_cursorpos_from_linepos(char, line) {
+			x = context.measureText(lines[line].substring(0, char)).width;
+			y = line * self.fontsize;
+			return { x: x, y: y };
+		}
+		
+		this.get_cursorpos_from_textpos = get_cursorpos_from_textpos;
+		
+		function get_cursorpos_from_textpos(textpos) {
+			var pos = self.get_linepos_from_textpos(textpos);
+			return self.get_cursorpos_from_linepos(pos.char, pos.line);
 		}
 		
 		//Change the textcursorpos to conform with the linecursorpos
@@ -212,7 +342,7 @@
 			this.animate();
 			this.display();
 		}
-		
+				
 		this.display = display;
 		
 		function display() {
@@ -230,13 +360,42 @@
 			//lines=[];
 			//Wrap by word and put cursor in right place
 			//this.populate_lines();
+			if (self.select_start != self.select_end) {
+				if (self.select_start > self.select_end) {
+					var tmp = self.select_start;
+					self.select_start = self.select_end;
+					self.select_end = tmp;
+				}
+				context.fillStyle="#81e7f9";
+				var startpos = get_cursorpos_from_textpos(self.select_start);
+				var endpos = get_cursorpos_from_textpos(self.select_end);
+				if (startpos.y == endpos.y) {
+					//Single line
+					context.fillRect(startpos.x, startpos.y, endpos.x - startpos.x, self.fontsize);
+				} else {
+					//Multiple lines
+					//End line because that's easy
+					context.fillRect(0, endpos.y, endpos.x, self.fontsize);
+					//Fist line
+					var firstline = get_linepos_from_textpos(self.select_start);
+					var lastline = get_linepos_from_textpos(self.select_end);
+					var endofline = get_cursorpos_from_linepos(lines[firstline.line].length, firstline.line);
+					context.fillRect(startpos.x, startpos.y, endofline.x - startpos.x, self.fontsize);
+					//Get the lines in between
+					for(var x=firstline.line + 1; x < lastline.line; x++) {
+						var endofline = get_cursorpos_from_linepos(lines[x].length, x);
+						context.fillRect(0, endofline.y, endofline.x, self.fontsize);
+					}
+					
+				}
+				context.fillStyle="black";
+			}
 			for(x=0; x < lines.length; x++) {
 				context.fillText(lines[x], 0, (self.fontsize * (x+1)));
 			}
 			if (cursorBlink == 1) {
-				cursorpos.x = context.measureText(lines[linecursorpos.y].substring(0, linecursorpos.x)).width;
-				cursorpos.y = linecursorpos.y * self.fontsize;
-				context.fillRect(cursorpos.x, cursorpos.y, 1,  this.fontsize);
+				var pos = get_cursorpos_from_linepos(linecursorpos.x, linecursorpos.y);
+				context.fillRect(pos.x, pos.y, 1,  this.fontsize);
 			}
 		}
 		
@@ -263,9 +422,9 @@
 </div>-->
 </div>
 <div>
-	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span></p>
-	<p><strong>Text cursor pos</strong> <span id="textcursor">0</span></p>
-	<p><strong>Mouse click pos:</strong> <span id="mousex">0</span> <span id="mousey">0</span></p>
+	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span><br />
+	<strong>Text cursor pos</strong> <span id="textcursor">0</span><br />
+	<strong>Mouse click pos:</strong> <span id="mousex">0</span> <span id="mousey">0</span></p>
 </div>
 <style>
 	.done { text-decoration: line-through }
@@ -284,6 +443,9 @@
 		<li class='done'>Clean up cursor handling</li>
 		<li class='done'>Moving cursor with mouse</li>
 		<li class='done'>Blinking cursor</li>
+		<li class='done'>Selecting</li>
+		<li>Bug when selecting from first char</li>
+		<li>Deleting selection</li>
 		<li>Formatting system</li>
 		<li>Bold</li>
 		<li>Italic</li>
@@ -295,7 +457,7 @@
 		<li>Images</li>
 		<li>Tables</li>
 		<li>Copy and pasting</li>
-		<li>Selecting</li>
+		<li>Spellcheck</li>
 		<li>…</li>
 		<li>WIN!</li>
 	</ol>
