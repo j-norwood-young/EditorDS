@@ -17,7 +17,7 @@
 		var textcursorpos=0;
 		var linecursorpos={x:0, y:0}; //Char, line
 		var self = this;
-		var lines=[];
+		this.lines=[];
 		this.select_start=0;
 		this.select_end=0;
 		var selecting=false;
@@ -69,7 +69,7 @@
 			}
 			if (keyCode == 39) { //right arrow
 				if (e.metaKey) {
-					self.set_linecursor(lines[linecursorpos.y].length-1, linecursorpos.y);
+					self.set_linecursor(self.lines[linecursorpos.y].length-1, linecursorpos.y);
 				} else if (textcursorpos< self.text.length) {
 					if (e.shiftKey) {
 						if (!selecting) {
@@ -97,7 +97,7 @@
 						select_text = self.text.substring(self.select_start, self.select_end);
 						self.animate();
 				} else {
-					if ((lines.length>1) && (linecursorpos.y>0)) {
+					if ((self.lines.length>1) && (linecursorpos.y>0)) {
 						self.change_linecursor(0, -1);
 					}
 				}
@@ -114,7 +114,7 @@
 						select_text = self.text.substring(self.select_start, self.select_end);
 						self.animate();
 				} else {
-					if (linecursorpos.y<(lines.length-1)) {
+					if (linecursorpos.y<(self.lines.length-1)) {
 						self.change_linecursor(0, 1);
 					}
 				}
@@ -182,8 +182,8 @@
 			line = Math.floor(y / self.fontsize);
 			var s="";
 			var char=0;
-			for(var i=0; i < lines[line].length; i++) {
-				s = s + lines[line][i];
+			for(var i=0; i < self.lines[line].length; i++) {
+				s = s + self.lines[line][i];
 				if (context.measureText(s).width > x) {
 					char = s.length - 1;
 					break;
@@ -207,7 +207,7 @@
 		this.populate_lines = populate_lines;
 		
 		function populate_lines() {
-			lines=[];
+			self.lines=[];
 			var tmp = '';
 			var words = this.text.split(' ');
 			while(words.length) {
@@ -216,91 +216,52 @@
 			    tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
 			    var width=context.measureText(tmp).width;
 			    if (width >= (this.width - 10)) {
-			    	lines.push(s + ' '); //We want to end with a space
+			    	self.lines.push(s + ' '); //We want to end with a space
 			    	tmp = word; //Start next line with the wrapped word
 			    }
 			}
-			lines.push(tmp); //Don't forget the last line
+			self.lines.push(tmp); //Don't forget the last line
 		}
 		
-		//Change the linecursorpos to conform with the textcursorpos
-		this.textpostolinepos = textpostolinepos;
-		
-		function textpostolinepos() {
-			var pos = get_linepos_from_textpos(textcursorpos);
+		this.textpostolinepos = function() {
+			var pos = self.get_linepos_from_textpos(textcursorpos);
 			linecursorpos.y = pos.line;
 			linecursorpos.x = pos.char;
 		}
 		
-		this.get_linepos_from_textpos = get_linepos_from_textpos;
-		
-		function get_linepos_from_textpos(textpos) {
+		this.get_linepos_from_textpos = function(textpos) {
 			self.populate_lines();
 			var total = 0;
 			var line = 0;
 			while (textpos > total) {
-				total += lines[line++].length;
+				total += self.lines[line++].length;
 			}
 			line--;
 			var diff = total - textpos;
-			var char = lines[line].length - diff;
-			
-			/*var tmplines = [];
-			var orig = self.text.substring(0, textpos);
-			var tmp = '';
-			var words = orig.split(' ');
-			while(words.length) {
-				s = tmp;
-				word = words.shift();
-				tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
-				var width=context.measureText(tmp).width;
-				if (width >= (this.width - 10)) {
-					tmplines.push(s);
-					tmp = word; //Start next line with the wrapped word
-				}
-			}
-			tmplines.push(tmp); //Don't forget the last line
-			line = tmplines.length - 1;
-			//Check that we're not on a wrapped word here
-			var tmpline = lines[line];
-			if (tmpline.length - 1 < tmplines[tmplines.length - 1].length) {
-				line++;
-				char = tmplines[tmplines.length - 1].length - tmpline.length;
-			} else {
-				char = tmplines[tmplines.length - 1].length;
-			}*/
+			var char = self.lines[line].length - diff;
 			return { char: char, line: line };
 		}
 		
-		this.get_cursorpos_from_linepos = get_cursorpos_from_linepos;
-		
-		function get_cursorpos_from_linepos(char, line) {
-			x = context.measureText(lines[line].substring(0, char)).width;
+		this.get_cursorpos_from_linepos = function(char, line) {
+			x = context.measureText(self.lines[line].substring(0, char)).width;
 			y = line * self.fontsize;
 			return { x: x, y: y };
 		}
 		
-		this.get_cursorpos_from_textpos = get_cursorpos_from_textpos;
-		
-		function get_cursorpos_from_textpos(textpos) {
+		this.get_cursorpos_from_textpos = function(textpos) {
 			var pos = self.get_linepos_from_textpos(textpos);
 			return self.get_cursorpos_from_linepos(pos.char, pos.line);
 		}
 		
-		//Change the textcursorpos to conform with the linecursorpos
-		this.linepostotextpos = linepostotextpos;
-		
-		function linepostotextpos() {
+		this.linepostotextpos = function() {
 			var count=0;
 			for(x=0; x<linecursorpos.y; x++) {
-				count=count+lines[x].length;
+				count=count+self.lines[x].length;
 			}
 			textcursorpos=count+linecursorpos.x;
 		}
 		
-		this.change_textcursor = change_textcursor;
-		
-		function change_textcursor(x) {
+		this.change_textcursor = function(x) {
 			textcursorpos += x;
 			this.populate_lines();
 			this.textpostolinepos();
@@ -308,9 +269,7 @@
 			this.display();
 		}
 		
-		this.set_textcursor = set_textcursor;
-		
-		function set_textcursor(x) {
+		this.set_textcursor = function(x) {
 			textcursorpos = x;
 			this.populate_lines();
 			this.textpostolinepos();
@@ -318,13 +277,11 @@
 			this.display();
 		}
 		
-		this.change_linecursor = change_linecursor;
-		
-		function change_linecursor(x, y) {
+		this.change_linecursor = function(x, y) {
 			linecursorpos.x += x;
 			linecursorpos.y += y;
-			if (linecursorpos.x > lines[linecursorpos.y].length) {
-				linecursorpos.x = lines[linecursorpos.y].length;
+			if (linecursorpos.x > self.lines[linecursorpos.y].length) {
+				linecursorpos.x = self.lines[linecursorpos.y].length;
 			}
 			this.populate_lines();
 			this.linepostotextpos();
@@ -332,9 +289,7 @@
 			this.display();
 		}
 		
-		this.set_linecursor = set_linecursor;
-		
-		function set_linecursor(x, y) {
+		this.set_linecursor = function(x, y) {
 			linecursorpos.x = x;
 			linecursorpos.y = y;
 			this.populate_lines();
@@ -342,10 +297,8 @@
 			this.animate();
 			this.display();
 		}
-				
-		this.display = display;
-		
-		function display() {
+
+		this.display = function() {
 			var self=this;
 			$("#linecursorx").html(linecursorpos.x);
 			$("#linecursory").html(linecursorpos.y);
@@ -355,11 +308,7 @@
 		this.animate = function() {
 			//Clear the scene
 			context.clearRect(0, 0, this.width, this.height);
-			
-			
-			//lines=[];
 			//Wrap by word and put cursor in right place
-			//this.populate_lines();
 			if (self.select_start != self.select_end) {
 				if (self.select_start > self.select_end) {
 					var tmp = self.select_start;
@@ -367,8 +316,8 @@
 					self.select_end = tmp;
 				}
 				context.fillStyle="#81e7f9";
-				var startpos = get_cursorpos_from_textpos(self.select_start);
-				var endpos = get_cursorpos_from_textpos(self.select_end);
+				var startpos = self.get_cursorpos_from_textpos(self.select_start);
+				var endpos = self.get_cursorpos_from_textpos(self.select_end);
 				if (startpos.y == endpos.y) {
 					//Single line
 					context.fillRect(startpos.x, startpos.y, endpos.x - startpos.x, self.fontsize);
@@ -377,24 +326,24 @@
 					//End line because that's easy
 					context.fillRect(0, endpos.y, endpos.x, self.fontsize);
 					//Fist line
-					var firstline = get_linepos_from_textpos(self.select_start);
-					var lastline = get_linepos_from_textpos(self.select_end);
-					var endofline = get_cursorpos_from_linepos(lines[firstline.line].length, firstline.line);
+					var firstline = self.get_linepos_from_textpos(self.select_start);
+					var lastline = self.get_linepos_from_textpos(self.select_end);
+					var endofline = self.get_cursorpos_from_linepos(self.lines[firstline.line].length, firstline.line);
 					context.fillRect(startpos.x, startpos.y, endofline.x - startpos.x, self.fontsize);
 					//Get the lines in between
 					for(var x=firstline.line + 1; x < lastline.line; x++) {
-						var endofline = get_cursorpos_from_linepos(lines[x].length, x);
+						var endofline = self.get_cursorpos_from_linepos(self.lines[x].length, x);
 						context.fillRect(0, endofline.y, endofline.x, self.fontsize);
 					}
 					
 				}
 				context.fillStyle="black";
 			}
-			for(x=0; x < lines.length; x++) {
-				context.fillText(lines[x], 0, (self.fontsize * (x+1)));
+			for(x=0; x < self.lines.length; x++) {
+				context.fillText(self.lines[x], 0, (self.fontsize * (x+1)));
 			}
 			if (cursorBlink == 1) {
-				var pos = get_cursorpos_from_linepos(linecursorpos.x, linecursorpos.y);
+				var pos = self.get_cursorpos_from_linepos(linecursorpos.x, linecursorpos.y);
 				context.fillRect(pos.x, pos.y, 1,  this.fontsize);
 			}
 		}
