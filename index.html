@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<meta charset="UTF-8" lang="en-gb">
+<script src='http://code.jquery.com/jquery-1.7.2.min.js'></script>
+<script language='javascript' type='text/javascript'>
+(function( $ ) {
+	$.fn.editorDS = function() {
+		this.margin = {x: 10, y: 10};
+		this.width = 900;
+		this.height = 300;
+		this.fontsize = 24;
+		this.text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam vestibulum sodales lacus, id sollicitudin mi adipiscing id. Morbi purus felis, iaculis nec sagittis id,\n ultrices ac sapien. Praesent velit dolor, consectetur iaculis scelerisque eget, cursus nec magna. Fusce vitae turpis est, at luctus leo. Vestibulum purus nisi, suscipit sed accumsan ut, blandit vel quam. Vivamus at dui a felis molestie adipiscing ac quis leo. Aliquam erat volutpat. Vestibulum porta, augue eget malesuada auctor, urna mauris hendrerit urna, et accumsan massa enim bibendum leo. Etiam et congue elit. Pellentesque a nibh justo, at dignissim risus. Mauris non neque a mi accumsan mattis. Integer tortor nisi, consequat sagittis dignissim ac, hendrerit eget ipsum. Proin leo augue, viverra vitae condimentum eu, pretium id erat.";
+		this.el = false;
+		this.append('<canvas style="cursor:text" class="editorDS-canvas" width="'+this.width+'" height="'+this.height+'"></canvas>');
+		var canvas = this.children('.editorDS-canvas')[0];
+		var context = canvas.getContext('2d');
+		var cursorpos={ x:this.margin.x, y:this.margin.y };
+		var textcursorpos=0;
+		var linecursorpos={x:0, y:0}; //Char, line
+		var self = this;
+		this.lines=[];
+		this.select_start=0;
+		this.select_end=0;
+		var selecting=false;
+		var select_text="";
+		
+		context.font = this.fontsize+"px helvetica neue";
+		
+		$(document).keypress(function(e) {
+			var caught = false;
+			var keyCode=e.which;
+			letter='';
+			if (!e.metaKey) {
+				var letter=String.fromCharCode(e.keyCode);
+				if (self.select_start != self.select_end) {
+					self.text = self.text.substring(0, self.select_start) + self.text.substring(self.select_end, self.text.length);
+					console.log(self.text);
+					self.populate_lines();
+					self.set_textcursor(self.select_start);
+					self.select_end = self.select_start;
+				}
+				self.text = self.text.substring(0, textcursorpos) + letter + self.text.substring(textcursorpos, self.text.length);
+				self.change_textcursor(+1);
+				caught = true;
+			}
+			if (caught) {
+				return false;
+			}
+		});
+		
+		$(document).keydown(function(e) {
+			var caught = false;
+			var keyCode=e.which;
+			if (keyCode == 8) { //backspace
+				if (self.select_start != self.select_end) {
+					self.text = self.text.substring(0, self.select_start) + self.text.substring(self.select_end, self.text.length);
+					self.set_textcursor(self.select_start);
+					self.select_end = self.select_start;
+				}
+				self.text = self.text.substring(0, textcursorpos - 1) + self.text.substring(textcursorpos, self.text.length);
+				self.change_textcursor(-1);
+				caught = true;
+			}
+			if (keyCode == 37) { //left arrow
+				if (e.metaKey) {
+					self.set_linecursorpos(0, linecursorpos.y);
+					self.select_start = self.select_end = textcursorpos;
+				} else if (textcursorpos > 0) {
+					if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_textcursor(-1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+					} else {
+						self.change_textcursor(-1);
+						self.select_start = self.select_end = textcursorpos;
+					}
+				}
+				caught = true;
+			}
+			if (keyCode == 39) { //right arrow
+				if (e.metaKey) {
+					self.set_linecursor(self.lines[linecursorpos.y].length-1, linecursorpos.y);
+					self.select_start = self.select_end = textcursorpos;
+				} else if (textcursorpos< self.text.length) {
+					if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_textcursor(+1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+					} else {
+						self.change_textcursor(+1);
+						self.select_start = self.select_end = textcursorpos;
+					}
+				}
+				caught = true;
+			}
+			if (keyCode == 38) { //up arrow
+				if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_linecursor(0, -1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+				} else {
+					if ((self.lines.length>1) && (linecursorpos.y>0)) {
+						self.change_linecursor(0, -1);
+						self.select_start = self.select_end = textcursorpos;
+					}
+				}
+				caught = true;
+			}
+			if (keyCode == 40) { //down arrow
+				if (e.shiftKey) {
+						if (!selecting) {
+							selecting = true;
+							self.select_start=textcursorpos;
+						}
+						self.change_linecursor(0, 1);
+						self.select_end = textcursorpos;
+						select_text = self.text.substring(self.select_start, self.select_end);
+						self.animate();
+				} else {
+					if (linecursorpos.y<(self.lines.length-1)) {
+						self.change_linecursor(0, 1);
+						self.select_start = self.select_end = textcursorpos;
+					}
+				}
+				caught = true;
+			}
+			if (caught) {
+				return false;
+			}
+		});
+		
+		$(document).keyup(function(e) {
+			if (e.keyCode==16) { //Lifted the shift key
+				if (selecting) {
+					selecting = false;
+					self.select_end = textcursorpos;
+					select_text = self.text.substring(self.select_start, self.select_end);
+					console.log(select_text);
+				}
+			}
+		});
+		
+		$('.editorDS-canvas').click(function(e) {
+			
+		});
+		
+		var dragging = false;
+		
+		$('.editorDS-canvas').mousedown(function(e) {
+			dragging = true;
+			var pos=get_cursor_from_mouse(e);
+			self.set_linecursor(pos.char, pos.line);
+			self.select_start = self.select_end = textcursorpos;
+		});
+		
+		$('.editorDS-canvas').mouseup(function(e) {
+			dragging = false;
+			var pos=get_cursor_from_mouse(e);
+			if (!((pos.char == linecursorpos.x) && (pos.line == linecursorpos.y))) {
+				//We dragged
+				self.set_linecursor(pos.char, pos.line);
+				self.select_end = textcursorpos;
+				select_text = self.text.substring(self.select_start, self.select_end);
+				console.log(self.select_start);
+				console.log(select_text);
+			}
+		});
+		
+		$('.editorDS-canvas').mousemove(function(e) {
+			var pos=get_cursor_from_mouse(e);
+			if (!((pos.char == linecursorpos.x) && (pos.line == linecursorpos.y)) && (dragging)) {
+				//We dragged
+				self.set_linecursor(pos.char, pos.line);
+				self.select_end = textcursorpos;
+				select_text = self.text.substring(self.select_start, self.select_end);
+				self.animate();
+			}
+		});
+		
+		
+		function get_cursor_from_mouse(e) {
+			x=e.offsetX;
+			y=e.offsetY;
+			$("#mousex").html(x);
+			$("#mousey").html(y);
+			line = Math.floor(y / self.fontsize);
+			var s="";
+			var char=0;
+			if (!self.lines[line]) {
+				return { char: 0, line: 0 };
+			}
+			for(var i=0; i < self.lines[line].length; i++) {
+				s = s + self.lines[line][i];
+				if (context.measureText(s).width > x) {
+					char = s.length - 1;
+					break;
+				}
+			}
+			return { char: char, line: line };
+		}
+		
+		//Animation
+		var cursorBlink=0;
+		setInterval(function() {
+			if (cursorBlink) {
+				cursorBlink = 0;
+			} else {
+				cursorBlink=1;
+			}
+			self.animate();
+		}, 500);
+		
+		//Fill our 'lines' array with words
+		this.populate_lines = function() {
+			self.lines=[];
+			var tmp = '';
+			var words = this.text.split(' ');
+			while(words.length) {
+			    s = tmp;
+			    word = words.shift();
+			    tmp.length ? tmp = tmp +' '+ word : tmp = word; //Careful not to put a space on first line
+			    var width=context.measureText(tmp).width;
+			    if (width >= (this.width - 10)) {
+			    	self.lines.push(s + ' '); //We want to end with a space
+			    	tmp = word; //Start next line with the wrapped word
+			    }
+			}
+			self.lines.push(tmp); //Don't forget the last line
+		}
+		
+		this.textpostolinepos = function() {
+			var pos = self.get_linepos_from_textpos(textcursorpos);
+			linecursorpos.y = pos.line;
+			linecursorpos.x = pos.char;
+		}
+		
+		this.get_linepos_from_textpos = function(textpos) {
+			self.populate_lines();
+			var total = 0;
+			var line = 0;
+			while (textpos > total) {
+				if (!self.lines[line]) {
+					break;;
+				}
+				total += self.lines[line++].length;
+			}
+			line--;
+			var diff = total - textpos;
+			if (!self.lines[line]) {
+				return { char: 0, line: 0 };
+			}
+			var char = self.lines[line].length - diff;
+			return { char: char, line: line };
+		}
+		
+		this.get_cursorpos_from_linepos = function(char, line) {
+			x = context.measureText(self.lines[line].substring(0, char)).width;
+			y = line * self.fontsize;
+			return { x: x, y: y };
+		}
+		
+		this.get_cursorpos_from_textpos = function(textpos) {
+			var pos = self.get_linepos_from_textpos(textpos);
+			return self.get_cursorpos_from_linepos(pos.char, pos.line);
+		}
+		
+		this.linepostotextpos = function() {
+			var count=0;
+			for(x=0; x<linecursorpos.y; x++) {
+				count=count+self.lines[x].length;
+			}
+			textcursorpos=count+linecursorpos.x;
+		}
+		
+		this.change_textcursor = function(x) {
+			textcursorpos += x;
+			this.populate_lines();
+			this.textpostolinepos();
+			this.animate();
+			this.display();
+		}
+		
+		this.set_textcursor = function(x) {
+			textcursorpos = x;
+			this.populate_lines();
+			this.textpostolinepos();
+			this.animate();
+			this.display();
+		}
+		
+		this.change_linecursor = function(x, y) {
+			linecursorpos.x += x;
+			linecursorpos.y += y;
+			if (linecursorpos.x > self.lines[linecursorpos.y].length) {
+				linecursorpos.x = self.lines[linecursorpos.y].length;
+			}
+			this.populate_lines();
+			this.linepostotextpos();
+			this.animate();
+			this.display();
+		}
+		
+		this.set_linecursor = function(x, y) {
+			linecursorpos.x = x;
+			linecursorpos.y = y;
+			this.populate_lines();
+			this.linepostotextpos();
+			this.animate();
+			this.display();
+		}
+
+		this.display = function() {
+			var self=this;
+			$("#linecursorx").html(linecursorpos.x);
+			$("#linecursory").html(linecursorpos.y);
+			$("#textcursor").html(textcursorpos);
+		}
+		
+		this.animate = function() {
+			//Clear the scene
+			context.clearRect(0, 0, this.width, this.height);
+			//Wrap by word and put cursor in right place
+			if (self.select_start != self.select_end) {
+				if (self.select_start > self.select_end) {
+					var tmp = self.select_start;
+					self.select_start = self.select_end;
+					self.select_end = tmp;
+				}
+				context.fillStyle="#81e7f9";
+				var startpos = self.get_cursorpos_from_textpos(self.select_start);
+				var endpos = self.get_cursorpos_from_textpos(self.select_end);
+				if (startpos.y == endpos.y) {
+					//Single line
+					context.fillRect(startpos.x, startpos.y, endpos.x - startpos.x, self.fontsize);
+				} else {
+					//Multiple lines
+					//End line because that's easy
+					context.fillRect(0, endpos.y, endpos.x, self.fontsize);
+					//Fist line
+					var firstline = self.get_linepos_from_textpos(self.select_start);
+					var lastline = self.get_linepos_from_textpos(self.select_end);
+					var endofline = self.get_cursorpos_from_linepos(self.lines[firstline.line].length, firstline.line);
+					context.fillRect(startpos.x, startpos.y, endofline.x - startpos.x, self.fontsize);
+					//Get the lines in between
+					for(var x=firstline.line + 1; x < lastline.line; x++) {
+						var endofline = self.get_cursorpos_from_linepos(self.lines[x].length, x);
+						context.fillRect(0, endofline.y, endofline.x, self.fontsize);
+					}
+					
+				}
+				context.fillStyle="black";
+			}
+			for(x=0; x < self.lines.length; x++) {
+				context.fillText(self.lines[x], 0, (self.fontsize * (x+1)));
+			}
+			if (cursorBlink == 1) {
+				var pos = self.get_cursorpos_from_linepos(linecursorpos.x, linecursorpos.y);
+				context.fillRect(pos.x, pos.y, 1,  this.fontsize);
+			}
+		}
+		
+		this.populate_lines();
+		
+		this.append('<input type="hidden" class="editorDS-input" />');
+	}
+})(jQuery);
+
+	$(function() {
+		$('#test').editorDS();
+	});
+	
+</script>
+
+<h1>EditorDS</h1>
+<h3>An editor that Doesn't Suck</h3>
+<div id='test'>
+<!--<div style='height: 22px; margin-bottom: 5px; font-family: helvetica; ' id='editorDS-buttons'>
+	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button bold'>B</div>
+	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button italic'>i</div>
+	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button underline'>U</div>
+	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button pic'>pic</div>
+</div>-->
+</div>
+<div>
+	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span><br />
+	<strong>Text cursor pos</strong> <span id="textcursor">0</span><br />
+	<strong>Mouse click pos:</strong> <span id="mousex">0</span> <span id="mousey">0</span></p>
+</div>
+<style>
+	.done { text-decoration: line-through }
+</style>
+<h2>Feature List</h2>
+<div id='progress'>
+	<ol>
+		<li class='done'>Catch typing and write letters on canvas</li>
+		<li class='done'>Move cursor with typing</li>
+		<li class='done'>Move cursor with arrows forward and backward</li>
+		<li class='done'>Delete</li>
+		<li class='done'>Wrap lines</li>
+		<li class='done'>Move cursor to next and previous lines</li>
+		<li class='done'>Move cursor by line with arrows up and down</li>
+		<li class='done'>Fix multiline delete</li>
+		<li class='done'>Clean up cursor handling</li>
+		<li class='done'>Moving cursor with mouse</li>
+		<li class='done'>Blinking cursor</li>
+		<li class='done'>Selecting</li>
+		<li class='done'>Bug when selecting from first char</li>
+		<li class='done'>Deleting selection</li>
+		<li>Formatting system</li>
+		<li>Bold</li>
+		<li>Italic</li>
+		<li>Underline</li>
+		<li>Strikethrough</li>
+		<li>Font sizes</li>
+		<li>Hard line breaks</li>
+		<li>Soft line breaks</li>
+		<li>Images</li>
+		<li>Tables</li>
+		<li>Copy and pasting</li>
+		<li>Spellcheck</li>
+		<li>…</li>
+		<li>WIN!</li>
+	</ol>
+</div>
