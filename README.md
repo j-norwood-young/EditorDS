@@ -27,8 +27,8 @@ Since I know nothing about developing word processors, I'm working it out as I g
     <li><del>Moving cursor with mouse</del></li>
     <li><del>Blinking cursor</del></li>
     <li><del>Selecting</del></li>
-    <li>Bug when selecting from first char</li>
-		<li>Deleting selection</li>
+    <li><del>Bug when selecting from first char</del></li>
+	<li><del>Deleting selection</del></li>
     <li>Formatting system</li>
     <li>Bold</li>
     <li>Italic</li>
