@@ -33,7 +33,6 @@
 				var letter=String.fromCharCode(e.keyCode);
 				if (self.select_start != self.select_end) {
 					self.text = self.text.substring(0, self.select_start) + self.text.substring(self.select_end, self.text.length);
-					console.log(self.text);
 					self.populate_lines();
 					self.set_textcursor(self.select_start);
 					self.select_end = self.select_start;
@@ -149,7 +148,6 @@
 					selecting = false;
 					self.select_end = textcursorpos;
 					select_text = self.text.substring(self.select_start, self.select_end);
-					console.log(select_text);
 				}
 			}
 		});
@@ -175,8 +173,6 @@
 				self.set_linecursor(pos.char, pos.line);
 				self.select_end = textcursorpos;
 				select_text = self.text.substring(self.select_start, self.select_end);
-				console.log(self.select_start);
-				console.log(select_text);
 			}
 		});
 		
@@ -384,27 +380,60 @@
 	});
 	
 </script>
+<link href="css/bootstrap.min.css" media="screen" rel="stylesheet" type="text/css" />
 
-<h1>EditorDS</h1>
-<h3>An editor that Doesn't Suck</h3>
-<div id='test'>
-<!--<div style='height: 22px; margin-bottom: 5px; font-family: helvetica; ' id='editorDS-buttons'>
-	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button bold'>B</div>
-	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button italic'>i</div>
-	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button underline'>U</div>
-	<div style='float: left; margin-right: 2px; width: 20px; height: 20px; border: 1px #CCC solid; text-align: center; cursor: pointer;' class='editorDS-button pic'>pic</div>
-</div>-->
+	<div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container-fluid">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="#">EditorDS</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+              <li><a href="#about">About</a></li>
+              <li><a href="#example">Example</a></li>
+              <li><a href="#features">Features</a></li>
+            </ul>
+          </div><!--/.nav-collapse -->
+        </div>
+      </div>
+    </div>
+    
+<div class="container" style="margin-top: 60px">
+<div class="hero-unit span8 offset1">
+	<span class="span3"><h1>EditorDS</h1>
+	An editor that Doesn't Suck</span>
+	<span class="span3"><h4>A <a href="http://10layer.com">10Layer</a> product</h4> Building tech for journalists</span>
 </div>
-<div>
-	<p><strong>Line cursor pos:</strong> <span id="linecursorx">0</span> <span id="linecursory">0</span><br />
-	<strong>Text cursor pos</strong> <span id="textcursor">0</span><br />
-	<strong>Mouse click pos:</strong> <span id="mousex">0</span> <span id="mousey">0</span></p>
+<div class="span9">
+	<a name="about"></a>
+	<h2>About EditorDS</h2>
+<p>In-browser editors have one thing in common - they all suck. They're heavy, slow, and don't look nice. The formatting you get out on the other side is dodgy at best. The built-in editor feature varies wildly between browsers. Something that should have been a nailed-down, standardised feature across all browsers years ago is instead a fetid, rabid crocodile waiting to bite developers in the arse.</p>
+
+<p>EditorDS is a project to create a browser editor that Doesn't Suck. I'm essentially building a word processor from the ground up, using HTML5's Canvas and a bit of Javascript and JQuery.</p>
+
+<p>The design goals are for it to look good, be slim and fast, offer only essential features, and purposefully *not* work in old browsers. Backward compatibility be damned - if you're too lazy to have upgraded your web browser in the last year, then you don't deserve to use this super-cool editor.</p>
+
+<p>I'm only planning ASCII support and minimal formatting. You won't even be able to change your font. You shouldn't get to change your font if you're using your editor to write a web page - that should happen in your front-end design. If you need to build middleware to speak to your word processor to include the last 200 songs you listened to while it scourers the web for cat pictures for you, then this isn't the editor for you. This editor is going to be about <i>words</i>.</p>
+
+<p>Since I know nothing about developing word processors, I'm working it out as I go. If you'd like to get involved with advice, code, or moral support, it would be greatly appreciated.</p>
+</div>
+
+<a name="example"></a>
+<div id='test' class="span9">
+	<h2>Example</h2>
 </div>
 <style>
 	.done { text-decoration: line-through }
 </style>
-<h2>Feature List</h2>
-<div id='progress'>
+
+<a name="features"></a>
+<div id='progress' class="span9">
+	<h2>Features</h2>
 	<ol>
 		<li class='done'>Catch typing and write letters on canvas</li>
 		<li class='done'>Move cursor with typing</li>
@@ -435,4 +464,5 @@
 		<li>…</li>
 		<li>WIN!</li>
 	</ol>
+</div>
 </div>
